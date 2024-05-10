@@ -1,0 +1,275 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "The AWS CloudFormation template for this Serverless application",
+  "Resources": {
+    "ServerlessDeploymentBucket": {
+      "Type": "AWS::S3::Bucket",
+      "Properties": {
+        "BucketEncryption": {
+          "ServerSideEncryptionConfiguration": [
+            {
+              "ServerSideEncryptionByDefault": {
+                "SSEAlgorithm": "AES256"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "ServerlessDeploymentBucketPolicy": {
+      "Type": "AWS::S3::BucketPolicy",
+      "Properties": {
+        "Bucket": {
+          "Ref": "ServerlessDeploymentBucket"
+        },
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": "s3:*",
+              "Effect": "Deny",
+              "Principal": "*",
+              "Resource": [
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":s3:::",
+                      {
+                        "Ref": "ServerlessDeploymentBucket"
+                      },
+                      "/*"
+                    ]
+                  ]
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":s3:::",
+                      {
+                        "Ref": "ServerlessDeploymentBucket"
+                      }
+                    ]
+                  ]
+                }
+              ],
+              "Condition": {
+                "Bool": {
+                  "aws:SecureTransport": false
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "ApiDashgatewayLogGroup": {
+      "Type": "AWS::Logs::LogGroup",
+      "Properties": {
+        "LogGroupName": "/aws/lambda/serverless-rust-test-dev-api-gateway"
+      }
+    },
+    "HelloDashworldLogGroup": {
+      "Type": "AWS::Logs::LogGroup",
+      "Properties": {
+        "LogGroupName": "/aws/lambda/serverless-rust-test-dev-hello-world"
+      }
+    },
+    "IamRoleLambdaExecution": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [
+                  "lambda.amazonaws.com"
+                ]
+              },
+              "Action": [
+                "sts:AssumeRole"
+              ]
+            }
+          ]
+        },
+        "Policies": [
+          {
+            "PolicyName": {
+              "Fn::Join": [
+                "-",
+                [
+                  "serverless-rust-test",
+                  "dev",
+                  "lambda"
+                ]
+              ]
+            },
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "logs:CreateLogStream",
+                    "logs:CreateLogGroup",
+                    "logs:TagResource"
+                  ],
+                  "Resource": [
+                    {
+                      "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/serverless-rust-test-dev*:*"
+                    }
+                  ]
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "logs:PutLogEvents"
+                  ],
+                  "Resource": [
+                    {
+                      "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/serverless-rust-test-dev*:*:*"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ],
+        "Path": "/",
+        "RoleName": {
+          "Fn::Join": [
+            "-",
+            [
+              "serverless-rust-test",
+              "dev",
+              {
+                "Ref": "AWS::Region"
+              },
+              "lambdaRole"
+            ]
+          ]
+        }
+      }
+    },
+    "ApiDashgatewayLambdaFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Code": {
+          "S3Bucket": {
+            "Ref": "ServerlessDeploymentBucket"
+          },
+          "S3Key": "serverless/serverless-rust-test/dev/1715344683939-2024-05-10T12:38:03.939Z/api-gateway.zip"
+        },
+        "Handler": "project.api-gateway",
+        "Runtime": "provided.al2",
+        "FunctionName": "serverless-rust-test-dev-api-gateway",
+        "MemorySize": 128,
+        "Timeout": 6,
+        "Tags": [
+          {
+            "Key": "rust",
+            "Value": "true"
+          }
+        ],
+        "Role": {
+          "Fn::GetAtt": [
+            "IamRoleLambdaExecution",
+            "Arn"
+          ]
+        }
+      },
+      "DependsOn": [
+        "ApiDashgatewayLogGroup"
+      ]
+    },
+    "HelloDashworldLambdaFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Code": {
+          "S3Bucket": {
+            "Ref": "ServerlessDeploymentBucket"
+          },
+          "S3Key": "serverless/serverless-rust-test/dev/1715344683939-2024-05-10T12:38:03.939Z/hello-world.zip"
+        },
+        "Handler": "project.hello-world",
+        "Runtime": "provided.al2",
+        "FunctionName": "serverless-rust-test-dev-hello-world",
+        "MemorySize": 128,
+        "Timeout": 6,
+        "Tags": [
+          {
+            "Key": "rust",
+            "Value": "true"
+          }
+        ],
+        "Role": {
+          "Fn::GetAtt": [
+            "IamRoleLambdaExecution",
+            "Arn"
+          ]
+        }
+      },
+      "DependsOn": [
+        "HelloDashworldLogGroup"
+      ]
+    },
+    "HelloDashworldLambdaVersionW8RG6afQ6vPiwpMpcn1Tjjnyrv1RMcT4Ox5Yx2qDM": {
+      "Type": "AWS::Lambda::Version",
+      "DeletionPolicy": "Retain",
+      "Properties": {
+        "FunctionName": {
+          "Ref": "HelloDashworldLambdaFunction"
+        },
+        "CodeSha256": "0O0knpIZ7sJKzTcs+oyxPC8onIyGwh/mwlcT17LfXYI="
+      }
+    },
+    "ApiDashgatewayLambdaVersionHnaggXtFsOMIC1t1EFLaCsYFzknAzSJo733hc54Pw": {
+      "Type": "AWS::Lambda::Version",
+      "DeletionPolicy": "Retain",
+      "Properties": {
+        "FunctionName": {
+          "Ref": "ApiDashgatewayLambdaFunction"
+        },
+        "CodeSha256": "JCcg+3Vq5gcSJeilxLaDoedyHcRWNRmdo1SjPwg9ZNw="
+      }
+    }
+  },
+  "Outputs": {
+    "ServerlessDeploymentBucketName": {
+      "Value": {
+        "Ref": "ServerlessDeploymentBucket"
+      },
+      "Export": {
+        "Name": "sls-serverless-rust-test-dev-ServerlessDeploymentBucketName"
+      }
+    },
+    "HelloDashworldLambdaFunctionQualifiedArn": {
+      "Description": "Current Lambda function version",
+      "Value": {
+        "Ref": "HelloDashworldLambdaVersionW8RG6afQ6vPiwpMpcn1Tjjnyrv1RMcT4Ox5Yx2qDM"
+      },
+      "Export": {
+        "Name": "sls-serverless-rust-test-dev-HelloDashworldLambdaFunctionQualifiedArn"
+      }
+    },
+    "ApiDashgatewayLambdaFunctionQualifiedArn": {
+      "Description": "Current Lambda function version",
+      "Value": {
+        "Ref": "ApiDashgatewayLambdaVersionHnaggXtFsOMIC1t1EFLaCsYFzknAzSJo733hc54Pw"
+      },
+      "Export": {
+        "Name": "sls-serverless-rust-test-dev-ApiDashgatewayLambdaFunctionQualifiedArn"
+      }
+    }
+  }
+}

@@ -1,0 +1,31 @@
+service: serverless-rust-test
+frameworkVersion: '3'
+configValidationMode: error
+
+provider:
+  name: aws
+  memorySize: 128
+  region: eu-west-2 # London
+  profile: personal
+  runtime: provided.al2
+
+plugins:
+  # this registers the plugin with serverless
+  - sls-rust
+
+# creates one artifact for each function
+package:
+  individually: true
+
+functions:
+  api-gateway:
+    handler: project.api-gateway
+    tags:
+      rust: "true"
+  hello-world:
+    # handler value syntax is `{rust_project_path}.{project_binary_name}`
+    #handler: rust_project_path.project_binary_name
+    handler: project.hello-world
+    # you must use tags.rust = true to make this plugin works:
+    tags:
+      rust: "true"
